@@ -56,26 +56,22 @@ Alt navigasyon barı: Üç ikon ve etiket: OYUN, EVRİM, AYARLAR. OYUN sekmesi a
 
 | Field | Value |
 |-------|-------|
-| Feature | |
-| Weight | |
-| Tool Used | |
-| Time | |
-| Attempts | |
-| Status | |
+| Feature | Dark Mode (Cyberpunk Theme) |
+| Weight | 5 kg |
+| Tool Used | Antigravity |
+| Time | 10 min |
+| Attempts | 1 |
+| Status | ✅ Success |
 
 **Prompt given to AI:**
-```
-
-```
+"Uygulamayı image_17.png'deki gibi tekrar kodla. Üstteki karanlık cyberpunk 'Oyun Alanı'nı ve alttaki 'Evrim Merkezi'ni karanlık temayla uyumlu hale getir..."
 
 **What happened:**
--
+- Uygulamanın tüm arayüzü, hocanın tablosundaki "Dark Mode" özelliğine uygun olarak baştan aşağı karanlık ve fütüristik (siberpunk) bir temayla (koyu arka planlar, neon yazılar) kodlandı.
 
-**Screenshot:**
+**Screenshot:** `assets/images/iter2_darkmode.png`
 
-**Commit:**
-
----
+**Commit:** `[NAIM: NexBlock] Cyberpunk Dark Mode teması uygulandı - 5kg`
 
 ### 🏋️ Iteration 3
 
