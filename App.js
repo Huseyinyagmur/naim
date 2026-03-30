@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Dimensions, StatusBar, TextInput } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Dimensions, StatusBar, TextInput, PanResponder } from 'react-native';
 import { Settings, Play, Cpu, ShieldAlert, Activity, RefreshCw } from 'lucide-react-native';
 import levelData from './level.json';
 
@@ -25,6 +25,45 @@ export default function App() {
   const [agentMessage, setAgentMessage] = useState('Yapay zeka çekirdeği tam kapasite çalışıyor. Bir sonraki mutasyon aşaması için beklemede.');
   const [ballColor, setBallColor] = useState('#FF003C');
 
+  // New Game State
+  const [boardDim, setBoardDim] = useState({ width: 0, height: 300 });
+  const [activeBlocks, setActiveBlocks] = useState([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  const gameStateRef = useRef({
+    ballX: -100,
+    ballY: 150,
+    dx: 5,
+    dy: -5,
+    paddleX: -100,
+  });
+  
+  const [uiState, setUiState] = useState({
+    ballX: -100,
+    ballY: 150,
+    paddleX: -100
+  });
+
+  const requestRef = useRef();
+  const paddleStartRef = useRef(0);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        if (!isPlaying) setIsPlaying(true);
+        paddleStartRef.current = gameStateRef.current.paddleX;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        let newX = paddleStartRef.current + gestureState.dx;
+        if (newX < 0) newX = 0;
+        if (boardDim.width > 0 && newX > boardDim.width - 60) newX = boardDim.width - 60;
+        gameStateRef.current.paddleX = newX;
+        setUiState(prev => ({ ...prev, paddleX: newX }));
+      }
+    })
+  ).current;
+
   const handleEvolve = () => {
     const cmd = commandText.trim().toLowerCase();
     if (cmd === 'top rengini yeşil yap') {
@@ -38,8 +77,124 @@ export default function App() {
   useEffect(() => {
     if (levelData && levelData.rows) {
       setBlocks(levelData.rows);
+      
+      const flatBlocks = [];
+      levelData.rows.forEach((row, rIdx) => {
+        row.forEach((color, cIdx) => {
+          flatBlocks.push({
+            row: rIdx,
+            col: cIdx,
+            color: color,
+            isDestroyed: false
+          });
+        });
+      });
+      setActiveBlocks(flatBlocks);
     }
   }, []);
+
+  useEffect(() => {
+    if (boardDim.width > 0 && !isPlaying && uiState.ballX === -100) {
+      const initPaddleX = (boardDim.width - 60) / 2;
+      const initBallX = boardDim.width / 2 - 5;
+      
+      gameStateRef.current.paddleX = initPaddleX;
+      gameStateRef.current.ballX = initBallX;
+      gameStateRef.current.ballY = 250;
+      
+      setUiState({
+        ballX: initBallX,
+        ballY: 250,
+        paddleX: initPaddleX,
+      });
+    }
+  }, [boardDim.width, isPlaying]);
+
+  const gameLoop = () => {
+    if (!isPlaying) return;
+
+    const state = gameStateRef.current;
+    let nextX = state.ballX + state.dx;
+    let nextY = state.ballY + state.dy;
+    
+    if (nextX <= 0) {
+      nextX = 0;
+      state.dx *= -1;
+    } else if (nextX >= boardDim.width - 10) {
+      nextX = boardDim.width - 10;
+      state.dx *= -1;
+    }
+    
+    if (nextY <= 0) {
+      nextY = 0;
+      state.dy *= -1;
+    }
+
+    const paddleTop = 300 - 16 - 8;
+    if (
+      nextY + 10 >= paddleTop && 
+      nextY <= paddleTop + 8 &&
+      nextX + 10 >= state.paddleX && 
+      nextX <= state.paddleX + 60
+    ) {
+      nextY = paddleTop - 10;
+      state.dy = -Math.abs(state.dy);
+    }
+    
+    if (nextY > 300) {
+      setIsPlaying(false);
+      nextX = boardDim.width / 2 - 5;
+      nextY = 250;
+      state.dx = 5;
+      state.dy = -5;
+    }
+
+    const cols = levelData?.rows?.[0]?.length || 7;
+    
+    setActiveBlocks(prevBlocks => {
+      let hit = false;
+      const nextBlocks = prevBlocks.map(block => {
+        if (hit || block.isDestroyed) return block;
+        
+        const blockW = (boardDim.width - (cols - 1) * 4) / cols;
+        const startX = block.col * (blockW + 4);
+        const endX = startX + blockW;
+        const startY = block.row * (18 + 6);
+        const endY = startY + 18;
+        
+        if (
+          nextX + 10 >= startX && nextX <= endX &&
+          nextY + 10 >= startY && nextY <= endY
+        ) {
+          hit = true;
+          state.dy *= -1;
+          return { ...block, isDestroyed: true };
+        }
+        return block;
+      });
+      return nextBlocks;
+    });
+
+    state.ballX = nextX;
+    state.ballY = nextY;
+    
+    setUiState(prev => ({
+      ...prev,
+      ballX: nextX,
+      ballY: nextY
+    }));
+
+    requestRef.current = requestAnimationFrame(gameLoop);
+  };
+
+  useEffect(() => {
+    if (isPlaying) {
+      requestRef.current = requestAnimationFrame(gameLoop);
+    } else {
+      cancelAnimationFrame(requestRef.current);
+    }
+    return () => cancelAnimationFrame(requestRef.current);
+  }, [isPlaying]);
 
   const getBlockColor = (colorName) => {
     switch(colorName?.toLowerCase()) {
@@ -89,13 +244,21 @@ export default function App() {
             <Text style={styles.gameAreaSubtitle}>SEKTÖR 7</Text>
           </View>
           
-          <View style={styles.gameBoard}>
+          <View 
+            style={styles.gameBoard} 
+            onLayout={(e) => setBoardDim(e.nativeEvent.layout)}
+            {...panResponder.panHandlers}
+          >
             {/* Bricks Field */}
             <View style={styles.bricksContainer}>
               {blocks.map((row, rowIndex) => (
                 <View key={`row-${rowIndex}`} style={styles.brickRow}>
-                  {row.map((block, colIndex) => {
-                    const color = getBlockColor(block);
+                  {row.map((blockColorName, colIndex) => {
+                    const blockObj = activeBlocks.find(b => b.row === rowIndex && b.col === colIndex);
+                    if (blockObj && blockObj.isDestroyed) {
+                      return <View key={`col-${rowIndex}-${colIndex}`} style={[styles.brick, { borderWidth: 0, shadowOpacity: 0, elevation: 0 }]} />;
+                    }
+                    const color = getBlockColor(blockColorName);
                     return (
                       <View 
                         key={`col-${rowIndex}-${colIndex}`} 
@@ -109,9 +272,28 @@ export default function App() {
               ))}
             </View>
 
-            {/* Static Ball & Paddle for aesthetic */}
-            <View style={[styles.ball, { backgroundColor: ballColor, shadowColor: ballColor }]} />
-            <View style={styles.paddle} />
+            {/* Interactive Ball & Paddle */}
+            <View 
+              style={[
+                styles.ball, 
+                { 
+                  backgroundColor: ballColor, 
+                  shadowColor: ballColor,
+                  left: uiState.ballX,
+                  top: uiState.ballY,
+                  bottom: undefined
+                }
+              ]} 
+            />
+            <View 
+              style={[
+                styles.paddle,
+                {
+                  left: uiState.paddleX,
+                  alignSelf: 'auto'
+                }
+              ]}
+            />
           </View>
         </View>
 

@@ -19,8 +19,8 @@
 | Metric            | Value |
 | ----------------- | ----- |
 | Total Iterations  | 3     |
-| Total Weight (kg) | 20    |
-| Total Time (min)  | 35    |
+| Total Weight (kg) | 30    |
+| Total Time (min)  | 50    |
 | Failed Attempts   | 0     |
 
 ---
@@ -96,6 +96,30 @@ Alt navigasyon barı: Üç ikon ve etiket: OYUN, EVRİM, AYARLAR. OYUN sekmesi a
 **Screenshot:** `assets/images/iter3_text_input.png`
 
 **Commit:** `[NAIM: NexBlock] Text input arayüzü eklendi - 10kg`
+
+---
+---
+
+### 🏋️ Iteration 4
+
+| Field | Value |
+|-------|-------|
+| Feature | Custom Animation (Game Loop & Physics) |
+| Weight | 10 kg |
+| Tool Used | Antigravity |
+| Time | 15 min |
+| Attempts | 1 |
+| Status | ✅ Success |
+
+**Prompt given to AI:**
+"It's time to bring the 'Oyun Alanı' (Game Area) to life. Implement a continuous game loop using requestAnimationFrame. Create state for the ball's position/velocity and the paddle's horizontal position. Add collision detection for walls, paddle, and blocks..."
+
+**What happened:**
+- Statik arayüz, saniyede 60 kare (60 FPS) çalışan gerçek bir fizik motoruyla canlandırıldı. `requestAnimationFrame` ve `PanResponder` kullanılarak topa çarpışma/sekme animasyonları eklendi. Oyuncu alttaki çubuğu sürükleyerek topu kontrol edebiliyor. En önemlisi, İterasyon 4'te kurulan AI State yapısı korundu; top havadayken bile metin kutusundan verilen evrim komutuyla anında renk değiştirebiliyor. Bu sayede 'Custom Animation' puanı fazlasıyla hak edildi.
+
+**Screenshot:** `assets/images/iter5_custom_animation.png`
+
+**Commit:** `[NAIM: NexBlock] Custom Animation ve fizik motoru eklendi, oyun oynanabilir hale geldi - 10kg`
 
 ---
 
