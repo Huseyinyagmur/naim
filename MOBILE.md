@@ -18,9 +18,9 @@
 
 | Metric            | Value |
 | ----------------- | ----- |
-| Total Iterations  | 5     |
-| Total Weight (kg) | 55    |
-| Total Time (min)  | 85    |
+| Total Iterations  | 6     |
+| Total Weight (kg) | 70    |
+| Total Time (min)  | 105   |
 | Failed Attempts   | 0     |
 
 ---
@@ -133,6 +133,29 @@ Alt navigasyon barı: Üç ikon ve etiket: OYUN, EVRİM, AYARLAR. OYUN sekmesi a
 - Kullanıcı tek bir doğal dille yazılmış cümlede ("bu leveli bitirdim yeni seviyede daha küçük bir çubuk daha çok blok ve top rengini siyah istiyorum" gibi) birden fazla evrim komutunu aynı anda sisteme işletebiliyor.
 - Yapay zeka bu komutları analiz edip oyunun fizik motorunu (hız, top rengi, çubuk boyutu ve dinamik level matrisi) anında güncelliyor.
 - Oyunun Kazanma (Seviye Tamamlandı) ve Kaybetme (Sistem Çöktü) durumları, oyuncuyu "AI Evrim Merkezi"nden komut vermeye yönlendirecek şekilde sisteme entegre edildi.
+
+---
+
+### 🏋️ Iteration 6
+
+| Field     | Value                     |
+| --------- | ------------------------- |
+| Feature   | Navigation (multi-screen) |
+| Weight    | 15 kg                     |
+| Tool Used | Antigravity               |
+| Time      | 20 min                    |
+| Attempts  | 1                         |
+| Status    | ✅ Success                |
+
+**Prompt given to AI:**
+"Implement a Multi-Screen Navigation system using react-navigation. Convert the app into 3 functional tabs: OYUN, EVRİM, AYARLAR. Move the game logic into src/screens/GameScreen.js and pause the game loop when navigating away."
+
+**What happened:**
+
+- Tek sayfalık (Spagetti) kod mimarisi `src/screens` klasör yapısıyla profesyonelce modüler hale getirildi.
+- `react-navigation` kullanılarak OYUN, EVRİM ve AYARLAR olmak üzere 3 sekmeli (Tab Navigation) gerçek bir mobil uygulama yapısı kuruldu.
+- EVRİM sekmesinde AI komutlarının detaylı bir siberpunk rehberi, AYARLAR sekmesinde ise 'Sistem Mimarı: Hüseyin' künyesi oluşturuldu.
+- En önemlisi, sekmeler arası geçişte oyun motorunun (physics loop) otomatik olarak duraklayıp (pause) OYUN sekmesine dönünce kayıpsız devam etmesi (`useFocusEffect` ile) sağlandı.
 
 ---
 
