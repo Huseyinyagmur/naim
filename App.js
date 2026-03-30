@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Dimensions, StatusBar, TextInput, PanResponder } from 'react-native';
+import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Dimensions, StatusBar, TextInput, PanResponder, Animated } from 'react-native';
 import { Settings, Play, Cpu, ShieldAlert, Activity, RefreshCw } from 'lucide-react-native';
 import levelData from './level.json';
 
@@ -24,18 +24,54 @@ export default function App() {
   const [commandText, setCommandText] = useState('');
   const [agentMessage, setAgentMessage] = useState('Yapay zeka çekirdeği tam kapasite çalışıyor. Bir sonraki mutasyon aşaması için beklemede.');
   const [ballColor, setBallColor] = useState('#FF003C');
+  const [ballBorder, setBallBorder] = useState('transparent');
+  const [paddleWidth, setPaddleWidth] = useState(60);
 
-  // New Game State
+  const [paddleColor, setPaddleColor] = useState(COLORS.neon);
+  const [paddleBorder, setPaddleBorder] = useState('transparent');
   const [boardDim, setBoardDim] = useState({ width: 0, height: 300 });
   const [activeBlocks, setActiveBlocks] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
-  
+  const [gamePhase, setGamePhase] = useState('IDLE');
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  const blinkAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (gamePhase === 'IDLE') {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(blinkAnim, { toValue: 0.2, duration: 600, useNativeDriver: true }),
+          Animated.timing(blinkAnim, { toValue: 1, duration: 600, useNativeDriver: true })
+        ])
+      ).start();
+    } else {
+      blinkAnim.stopAnimation();
+    }
+  }, [gamePhase]);
+
+  useEffect(() => {
+    if (gamePhase === 'GAMEOVER' || gamePhase === 'WIN') {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.timing(glowAnim, { toValue: 0.3, duration: 800, useNativeDriver: true })
+        ])
+      ).start();
+    } else {
+      glowAnim.stopAnimation();
+      glowAnim.setValue(0);
+    }
+  }, [gamePhase]);
+
   const gameStateRef = useRef({
     ballX: -100,
     ballY: 150,
     dx: 5,
     dy: -5,
     paddleX: -100,
+    paddleWidth: 60,
+    phase: 'IDLE',
   });
   
   const [uiState, setUiState] = useState({
@@ -51,27 +87,131 @@ export default function App() {
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
-        if (!isPlaying) setIsPlaying(true);
+        const phase = gameStateRef.current.phase;
+        if (phase === 'IDLE') {
+          setIsPlaying(true);
+          setGamePhase('PLAYING');
+          gameStateRef.current.phase = 'PLAYING';
+          gameStateRef.current.dx = 5;
+          gameStateRef.current.dy = -5;
+        }
         paddleStartRef.current = gameStateRef.current.paddleX;
       },
       onPanResponderMove: (evt, gestureState) => {
         let newX = paddleStartRef.current + gestureState.dx;
         if (newX < 0) newX = 0;
-        if (boardDim.width > 0 && newX > boardDim.width - 60) newX = boardDim.width - 60;
+        const currentPW = gameStateRef.current.paddleWidth;
+        if (boardDim.width > 0 && newX > boardDim.width - currentPW) newX = boardDim.width - currentPW;
         gameStateRef.current.paddleX = newX;
-        setUiState(prev => ({ ...prev, paddleX: newX }));
+        setUiState(prev => {
+          const nextUiState = { ...prev, paddleX: newX };
+          if (gameStateRef.current.phase === 'IDLE') {
+             nextUiState.ballX = newX + currentPW / 2 - 5;
+             gameStateRef.current.ballX = nextUiState.ballX;
+          }
+          return nextUiState;
+        });
       }
     })
   ).current;
 
   const handleEvolve = () => {
     const cmd = commandText.trim().toLowerCase();
-    if (cmd === 'top rengini yeşil yap') {
-      setBallColor('#00FF00');
-      setAgentMessage('Yapay zeka analiz etti: Top rengi başarıyla yeşil yapıldı. (Evrim başarılı).');
-    } else {
-      setAgentMessage("Üzgünüm, bu spesifik evrim komutunu henüz yorumlayamıyorum. Şu an sadece 'top rengini yeşil yap' komutunu test edebilirim.");
+    let actions = [];
+    
+    if (cmd.includes('yeni seviye') || cmd.includes('yeni level')) {
+      let totalRows = 3;
+      if (cmd.includes('çok blok') || cmd.includes('fazla blok')) {
+        totalRows = 6;
+        actions.push('Daha fazla bloklu yeni seviye oluşturuldu');
+      } else {
+        actions.push('Yeni seviye oluşturuldu');
+      }
+      
+      const flatBlocks = [];
+      const cols = 7;
+      const colors = ['turkuaz', 'neon', 'pembe', 'turkuaz', 'neon', 'pembe', 'turkuaz'];
+      const newRows = Array.from({ length: totalRows }, () => colors);
+      setBlocks(newRows);
+      
+      for (let rIdx = 0; rIdx < totalRows; rIdx++) {
+        for (let cIdx = 0; cIdx < cols; cIdx++) {
+          flatBlocks.push({
+            row: rIdx,
+            col: cIdx,
+            color: colors[cIdx % colors.length],
+            isDestroyed: false
+          });
+        }
+      }
+      setActiveBlocks(flatBlocks);
+      
+      const initPW = gameStateRef.current.paddleWidth;
+      const startX = boardDim.width > 0 ? (boardDim.width - initPW) / 2 : 150;
+      const ballStartX = startX + initPW / 2 - 5;
+      setIsPlaying(false);
+      setGamePhase('IDLE');
+      gameStateRef.current.phase = 'IDLE';
+      setUiState(prev => ({ ...prev, paddleX: startX, ballX: ballStartX, ballY: 266 }));
+      gameStateRef.current.paddleX = startX;
+      gameStateRef.current.ballX = ballStartX;
+      gameStateRef.current.ballY = 266;
     }
+    
+    if (cmd.includes('küçük çubuk') || cmd.includes('çubuğu küçült')) {
+      setPaddleWidth(prev => {
+        const newer = Math.max(20, prev - 40);
+        gameStateRef.current.paddleWidth = newer;
+        return newer;
+      });
+      actions.push('Çubuk küçültüldü');
+    }
+    
+    if (cmd.includes('büyük çubuk') || cmd.includes('çubuğu büyüt')) {
+      setPaddleWidth(prev => {
+        const newer = Math.min(boardDim.width || 300, prev + 40);
+        gameStateRef.current.paddleWidth = newer;
+        return newer;
+      });
+      actions.push('Çubuk büyütüldü');
+    }
+    
+    if (cmd.includes('çubuk') || cmd.includes('tahta')) {
+      if (cmd.includes('kırmızı')) { setPaddleColor('#FF003C'); setPaddleBorder('transparent'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
+      else if (cmd.includes('yeşil')) { setPaddleColor('#00FF00'); setPaddleBorder('transparent'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
+      else if (cmd.includes('mavi')) { setPaddleColor('#00FFFF'); setPaddleBorder('transparent'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
+      else if (cmd.includes('siyah')) { setPaddleColor('#000000'); setPaddleBorder('#00FFFF'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
+    } else {
+      if (cmd.includes('siyah')) {
+        setBallColor('#000000'); setBallBorder('#00FFFF'); actions.push('Top siyah yapıldı');
+      } else if (cmd.includes('yeşil')) {
+        setBallColor('#00FF00'); setBallBorder('transparent'); actions.push('Top yeşil yapıldı');
+      } else if (cmd.includes('mavi')) {
+        setBallColor('#00FFFF'); setBallBorder('transparent'); actions.push('Top mavi yapıldı');
+      } else if (cmd.includes('kırmızı')) {
+        setBallColor('#FF003C'); setBallBorder('transparent'); actions.push('Top kırmızı yapıldı');
+      }
+    }
+    
+    if (cmd.includes('hızlandır') || cmd.includes('daha hızlı')) {
+      gameStateRef.current.dx *= 1.5;
+      gameStateRef.current.dy *= 1.5;
+      actions.push('Oyun hızı artırıldı');
+    }
+    
+    if (cmd.includes('yavaşlat') || cmd.includes('daha yavaş')) {
+      gameStateRef.current.dx *= 0.6;
+      gameStateRef.current.dy *= 0.6;
+      actions.push('Oyun hızı düşürüldü');
+    }
+    
+    if (actions.length > 0) {
+      setAgentMessage('Evrim Raporu: ' + actions.join(', '));
+    } else {
+      setAgentMessage('Komut anlaşılamadı. Yeniden deneyin.');
+    }
+    
+    setCommandText('');
   };
 
   useEffect(() => {
@@ -95,16 +235,16 @@ export default function App() {
 
   useEffect(() => {
     if (boardDim.width > 0 && !isPlaying && uiState.ballX === -100) {
-      const initPaddleX = (boardDim.width - 60) / 2;
-      const initBallX = boardDim.width / 2 - 5;
+      const initPaddleX = (boardDim.width - paddleWidth) / 2;
+      const initBallX = initPaddleX + paddleWidth / 2 - 5;
       
       gameStateRef.current.paddleX = initPaddleX;
       gameStateRef.current.ballX = initBallX;
-      gameStateRef.current.ballY = 250;
+      gameStateRef.current.ballY = 266;
       
       setUiState({
         ballX: initBallX,
-        ballY: 250,
+        ballY: 266,
         paddleX: initPaddleX,
       });
     }
@@ -135,7 +275,7 @@ export default function App() {
       nextY + 10 >= paddleTop && 
       nextY <= paddleTop + 8 &&
       nextX + 10 >= state.paddleX && 
-      nextX <= state.paddleX + 60
+      nextX <= state.paddleX + state.paddleWidth
     ) {
       nextY = paddleTop - 10;
       state.dy = -Math.abs(state.dy);
@@ -143,18 +283,35 @@ export default function App() {
     
     if (nextY > 300) {
       setIsPlaying(false);
-      nextX = boardDim.width / 2 - 5;
-      nextY = 250;
-      state.dx = 5;
-      state.dy = -5;
+      setGamePhase('GAMEOVER');
+      state.phase = 'GAMEOVER';
+      
+      setTimeout(() => {
+        const resetX = state.paddleX + state.paddleWidth / 2 - 5;
+        const resetY = 266;
+        state.ballX = resetX;
+        state.ballY = resetY;
+        
+        setUiState(prev => ({
+          ...prev,
+          ballX: resetX,
+          ballY: resetY
+        }));
+        
+        setActiveBlocks(orig => orig.map(b => ({ ...b, isDestroyed: false })));
+        setGamePhase('IDLE');
+        state.phase = 'IDLE';
+      }, 2000);
+      return;
     }
 
     const cols = levelData?.rows?.[0]?.length || 7;
+    let anyLeft = false;
     
     setActiveBlocks(prevBlocks => {
       let hit = false;
       const nextBlocks = prevBlocks.map(block => {
-        if (hit || block.isDestroyed) return block;
+        if (block.isDestroyed) return block;
         
         const blockW = (boardDim.width - (cols - 1) * 4) / cols;
         const startX = block.col * (blockW + 4);
@@ -163,6 +320,7 @@ export default function App() {
         const endY = startY + 18;
         
         if (
+          !hit &&
           nextX + 10 >= startX && nextX <= endX &&
           nextY + 10 >= startY && nextY <= endY
         ) {
@@ -170,10 +328,22 @@ export default function App() {
           state.dy *= -1;
           return { ...block, isDestroyed: true };
         }
+        anyLeft = true;
         return block;
       });
+      
+      if (hit && !anyLeft) {
+        setTimeout(() => {
+          setIsPlaying(false);
+          setGamePhase('WIN');
+          state.phase = 'WIN';
+        }, 0);
+      }
       return nextBlocks;
     });
+
+    // Prevent further state updates if WIN triggered this loop
+    if (state.phase === 'WIN') return;
 
     state.ballX = nextX;
     state.ballY = nextY;
@@ -279,6 +449,8 @@ export default function App() {
                 { 
                   backgroundColor: ballColor, 
                   shadowColor: ballColor,
+                  borderColor: ballBorder !== 'transparent' ? ballBorder : undefined,
+                  borderWidth: ballBorder !== 'transparent' ? 2 : 0,
                   left: uiState.ballX,
                   top: uiState.ballY,
                   bottom: undefined
@@ -289,11 +461,39 @@ export default function App() {
               style={[
                 styles.paddle,
                 {
+                  backgroundColor: paddleColor,
+                  shadowColor: paddleColor,
+                  borderColor: paddleBorder !== 'transparent' ? paddleBorder : undefined,
+                  borderWidth: paddleBorder !== 'transparent' ? 2 : 0,
+                  width: paddleWidth,
                   left: uiState.paddleX,
                   alignSelf: 'auto'
                 }
               ]}
             />
+            
+            {/* CYBERPUNK OVERLAYS */}
+            {gamePhase === 'IDLE' && (
+              <Animated.View style={[styles.overlayContainer, { backgroundColor: 'transparent', opacity: blinkAnim }]} pointerEvents="none">
+                <Text style={styles.overlayTextSubGreen}>BAŞLAMAK İÇİN EKRANA DOKUN</Text>
+              </Animated.View>
+            )}
+
+            {gamePhase === 'GAMEOVER' && (
+              <Animated.View style={[styles.overlayContainer, { opacity: glowAnim }]} pointerEvents="none">
+                <ShieldAlert color="#FF003C" size={48} />
+                <Text style={styles.overlayTextRed}>SİSTEM ÇÖKTÜ</Text>
+                <Text style={styles.overlayTextSubRed}>YENİDEN BAŞLATILIYOR...</Text>
+              </Animated.View>
+            )}
+            
+            {gamePhase === 'WIN' && (
+              <Animated.View style={[styles.overlayContainer, { opacity: glowAnim }]} pointerEvents="none">
+                <Activity color="#00FF00" size={48} />
+                <Text style={styles.overlayTextGreen}>SEVİYE TAMAMLANDI</Text>
+                <Text style={styles.overlayTextSubGreen}>YENİ SEVİYE İÇİN AJANA KOMUT VERİN</Text>
+              </Animated.View>
+            )}
           </View>
         </View>
 
@@ -586,5 +786,46 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     letterSpacing: 1.5,
+  },
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(8, 8, 12, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  overlayTextRed: {
+    color: '#FF003C',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 4,
+    marginTop: 16,
+    textShadowColor: 'rgba(255, 0, 60, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  overlayTextSubRed: {
+    color: '#FF003C',
+    fontSize: 12,
+    marginTop: 8,
+    letterSpacing: 2,
+    opacity: 0.8,
+  },
+  overlayTextGreen: {
+    color: '#00FF00',
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: 3,
+    marginTop: 16,
+    textShadowColor: 'rgba(0, 255, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  overlayTextSubGreen: {
+    color: '#00FFFF',
+    fontSize: 10,
+    marginTop: 8,
+    letterSpacing: 2,
+    opacity: 0.9,
   }
 });
