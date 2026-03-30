@@ -19,6 +19,31 @@ const COLORS = {
   glowPembe: 'rgba(255, 0, 60, 0.4)',
 };
 
+// NLP Synonyms
+const growWords = ['büyüt', 'genişlet', 'uzat', 'büyük'];
+const shrinkWords = ['küçült', 'daralt', 'ufalt', 'kısalt'];
+const hardModeWords = ['zorlaştır', 'çok blok', 'kalabalık', 'doldur', 'fazla blok', 'blok sayısını artır', 'daha zor', 'blokla doldur', 'daha blok ekle', 'biraz daha blok', 'blok ekle', 'blok diz', 'ekranı blokla doldur'];
+const reduceWords = ['azalt', 'seyrelt', 'az blok', 'temizle', 'kolaylaştır', 'sil'];
+const newLevelWords = ['yeni seviye', 'yeni level', 'yeni', 'baştan', 'sıfırla', 'reset', 'geç', 'başka seviye'];
+const spawnSpeedWords = ['hızlandırıcı', 'nitro', 'turbo', 'hız noktası', 'hız at', 'hız ekle', 'hızlandırıcı atar mısın', 'hızlandırıcı ekle'];
+const spawnSlowWords = ['yavaşlatıcı', 'tuzak', 'fren', 'buz', 'yavaşlatma ekle', 'yavaşlatıcı atar mısın', 'fren atar mısın'];
+
+const multiBallWords = ['topu çoğalt', 'ikile', 'böl', 'iki top', 'multi'];
+const weatherWords = ['yağmur', 'fırtına', 'şimşek', 'hava durumu'];
+const trailWords = ['iz ekle', 'kuyruk', 'parlama'];
+const laserWords = ['lazer', 'silah', 'ateş', 'saldırı'];
+const shieldWords = ['kalkan', 'koruma', 'bariyer'];
+
+const colorWords = {
+  red: ['kırmızı', 'yakut', 'kan'],
+  green: ['yeşil', 'zümrüt', 'doğa'],
+  blue: ['mavi', 'safir', 'okyanus'],
+  black: ['siyah', 'obsidyen', 'karanlık', 'gölge'],
+  yellow: ['sarı', 'limon', 'güneş'],
+  
+
+};
+
 export default function App() {
   const [blocks, setBlocks] = useState([]);
   const [commandText, setCommandText] = useState('');
@@ -36,6 +61,16 @@ export default function App() {
   const glowAnim = useRef(new Animated.Value(0)).current;
 
   const blinkAnim = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.2, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.8, duration: 800, useNativeDriver: true })
+      ])
+    ).start();
+  }, []);
 
   useEffect(() => {
     if (gamePhase === 'IDLE') {
@@ -65,19 +100,28 @@ export default function App() {
   }, [gamePhase]);
 
   const gameStateRef = useRef({
-    ballX: -100,
-    ballY: 150,
-    dx: 5,
-    dy: -5,
+    balls: [{ x: -100, y: 266, dx: 5, dy: -5, id: 'b0', history: [] }],
     paddleX: -100,
     paddleWidth: 60,
     phase: 'IDLE',
+    powerUps: [],
+    blocks: [],
+    lasers: [],
+    shieldActive: false,
+    trailActive: false,
+    lasersActive: false,
+    laserCooldown: 0,
   });
-  
+
   const [uiState, setUiState] = useState({
-    ballX: -100,
-    ballY: 150,
-    paddleX: -100
+    balls: [{ x: -100, y: 266, dx: 5, dy: -5, id: 'b0', history: [] }],
+    paddleX: -100,
+    powerUps: [],
+    lasers: [],
+    shieldActive: false,
+    trailActive: false,
+    lasersActive: false,
+    weatherType: null,
   });
 
   const requestRef = useRef();
@@ -92,8 +136,10 @@ export default function App() {
           setIsPlaying(true);
           setGamePhase('PLAYING');
           gameStateRef.current.phase = 'PLAYING';
-          gameStateRef.current.dx = 5;
-          gameStateRef.current.dy = -5;
+          if (gameStateRef.current.balls.length > 0) {
+            gameStateRef.current.balls[0].dx = 5;
+            gameStateRef.current.balls[0].dy = -5;
+          }
         }
         paddleStartRef.current = gameStateRef.current.paddleX;
       },
@@ -105,9 +151,9 @@ export default function App() {
         gameStateRef.current.paddleX = newX;
         setUiState(prev => {
           const nextUiState = { ...prev, paddleX: newX };
-          if (gameStateRef.current.phase === 'IDLE') {
-             nextUiState.ballX = newX + currentPW / 2 - 5;
-             gameStateRef.current.ballX = nextUiState.ballX;
+          if (gameStateRef.current.phase === 'IDLE' && nextUiState.balls.length > 0) {
+            nextUiState.balls[0].x = newX + currentPW / 2 - 5;
+            gameStateRef.current.balls[0].x = nextUiState.balls[0].x;
           }
           return nextUiState;
         });
@@ -118,15 +164,10 @@ export default function App() {
   const handleEvolve = () => {
     const cmd = commandText.trim().toLowerCase();
     let actions = [];
-    
-    if (cmd.includes('yeni seviye') || cmd.includes('yeni level')) {
-      let totalRows = 3;
-      if (cmd.includes('çok blok') || cmd.includes('fazla blok')) {
-        totalRows = 6;
-        actions.push('Daha fazla bloklu yeni seviye oluşturuldu');
-      } else {
-        actions.push('Yeni seviye oluşturuldu');
-      }
+
+    if (hardModeWords.some(w => cmd.includes(w))) {
+      let totalRows = 7;
+      actions.push('Oyun alanına maksimum blok dolduruldu');
       
       const flatBlocks = [];
       const cols = 7;
@@ -144,7 +185,55 @@ export default function App() {
           });
         }
       }
+      gameStateRef.current.blocks = flatBlocks;
       setActiveBlocks(flatBlocks);
+    }
+
+    if (reduceWords.some(w => cmd.includes(w))) {
+      let totalRows = 2;
+      actions.push('Bloklar seyreltildi');
+      const flatBlocks = [];
+      const cols = 7;
+      const colors = ['turkuaz', 'neon', 'pembe', 'turkuaz', 'neon', 'pembe', 'turkuaz'];
+      const newRows = Array.from({ length: totalRows }, () => colors);
+      setBlocks(newRows);
+      for (let rIdx = 0; rIdx < totalRows; rIdx++) {
+        for (let cIdx = 0; cIdx < cols; cIdx++) {
+          flatBlocks.push({
+            row: rIdx, col: cIdx, color: colors[cIdx % colors.length], isDestroyed: false
+          });
+        }
+      }
+      gameStateRef.current.blocks = flatBlocks;
+      setActiveBlocks(flatBlocks);
+    }
+
+    if (newLevelWords.some(w => cmd.includes(w))) {
+      if (!hardModeWords.some(w => cmd.includes(w))) {
+        let totalRows = 3;
+        actions.push('Yeni seviye oluşturuldu');
+        
+        const flatBlocks = [];
+        const cols = 7;
+        const colors = ['turkuaz', 'neon', 'pembe', 'turkuaz', 'neon', 'pembe', 'turkuaz'];
+        const newRows = Array.from({ length: totalRows }, () => colors);
+        setBlocks(newRows);
+        
+        for (let rIdx = 0; rIdx < totalRows; rIdx++) {
+          for (let cIdx = 0; cIdx < cols; cIdx++) {
+            flatBlocks.push({
+              row: rIdx,
+              col: cIdx,
+              color: colors[cIdx % colors.length],
+              isDestroyed: false
+            });
+          }
+        }
+        gameStateRef.current.blocks = flatBlocks;
+        setActiveBlocks(flatBlocks);
+      } else {
+        actions.push('Yeni seviye sıfırlandı');
+      }
       
       const initPW = gameStateRef.current.paddleWidth;
       const startX = boardDim.width > 0 ? (boardDim.width - initPW) / 2 : 150;
@@ -152,13 +241,28 @@ export default function App() {
       setIsPlaying(false);
       setGamePhase('IDLE');
       gameStateRef.current.phase = 'IDLE';
-      setUiState(prev => ({ ...prev, paddleX: startX, ballX: ballStartX, ballY: 266 }));
+      gameStateRef.current.powerUps = [];
+      gameStateRef.current.lasers = [];
+      gameStateRef.current.shieldActive = false;
+      gameStateRef.current.trailActive = false;
+      gameStateRef.current.lasersActive = false;
+      gameStateRef.current.balls = [{ x: ballStartX, y: 266, dx: 5, dy: -5, id: 'b0', history: [] }];
       gameStateRef.current.paddleX = startX;
-      gameStateRef.current.ballX = ballStartX;
-      gameStateRef.current.ballY = 266;
+
+      setUiState(prev => ({ 
+        ...prev, 
+        paddleX: startX, 
+        balls: [{ x: ballStartX, y: 266, dx: 5, dy: -5, id: 'b0', history: [] }], 
+        powerUps: [], 
+        lasers: [], 
+        shieldActive: false, 
+        trailActive: false, 
+        lasersActive: false,
+        weatherType: null 
+      }));
     }
-    
-    if (cmd.includes('küçük çubuk') || cmd.includes('çubuğu küçült')) {
+
+    if (shrinkWords.some(w => cmd.includes(w))) {
       setPaddleWidth(prev => {
         const newer = Math.max(20, prev - 40);
         gameStateRef.current.paddleWidth = newer;
@@ -166,8 +270,8 @@ export default function App() {
       });
       actions.push('Çubuk küçültüldü');
     }
-    
-    if (cmd.includes('büyük çubuk') || cmd.includes('çubuğu büyüt')) {
+
+    if (growWords.some(w => cmd.includes(w))) {
       setPaddleWidth(prev => {
         const newer = Math.min(boardDim.width || 300, prev + 40);
         gameStateRef.current.paddleWidth = newer;
@@ -175,49 +279,111 @@ export default function App() {
       });
       actions.push('Çubuk büyütüldü');
     }
-    
-    if (cmd.includes('çubuk') || cmd.includes('tahta')) {
-      if (cmd.includes('kırmızı')) { setPaddleColor('#FF003C'); setPaddleBorder('transparent'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
-      else if (cmd.includes('yeşil')) { setPaddleColor('#00FF00'); setPaddleBorder('transparent'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
-      else if (cmd.includes('mavi')) { setPaddleColor('#00FFFF'); setPaddleBorder('transparent'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
-      else if (cmd.includes('siyah')) { setPaddleColor('#000000'); setPaddleBorder('#00FFFF'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
+
+    const isPaddle = cmd.includes('çubuk') || cmd.includes('tahta');
+    if (isPaddle) {
+      if (colorWords.red.some(w => cmd.includes(w))) { setPaddleColor('#FF003C'); setPaddleBorder('transparent'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
+      else if (colorWords.green.some(w => cmd.includes(w))) { setPaddleColor('#00FF00'); setPaddleBorder('transparent'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
+      else if (colorWords.blue.some(w => cmd.includes(w))) { setPaddleColor('#00FFFF'); setPaddleBorder('transparent'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
+      else if (colorWords.black.some(w => cmd.includes(w))) { setPaddleColor('#000000'); setPaddleBorder('#00FFFF'); actions.push('Evrim başarılı: Çubuk rengi güncellendi.'); }
     } else {
-      if (cmd.includes('siyah')) {
+      if (colorWords.black.some(w => cmd.includes(w))) {
         setBallColor('#000000'); setBallBorder('#00FFFF'); actions.push('Top siyah yapıldı');
-      } else if (cmd.includes('yeşil')) {
+      } else if (colorWords.green.some(w => cmd.includes(w))) {
         setBallColor('#00FF00'); setBallBorder('transparent'); actions.push('Top yeşil yapıldı');
-      } else if (cmd.includes('mavi')) {
+      } else if (colorWords.blue.some(w => cmd.includes(w))) {
         setBallColor('#00FFFF'); setBallBorder('transparent'); actions.push('Top mavi yapıldı');
-      } else if (cmd.includes('kırmızı')) {
+      } else if (colorWords.red.some(w => cmd.includes(w))) {
         setBallColor('#FF003C'); setBallBorder('transparent'); actions.push('Top kırmızı yapıldı');
       }
     }
-    
+
     if (cmd.includes('hızlandır') || cmd.includes('daha hızlı')) {
       gameStateRef.current.dx *= 1.5;
       gameStateRef.current.dy *= 1.5;
       actions.push('Oyun hızı artırıldı');
     }
-    
+
     if (cmd.includes('yavaşlat') || cmd.includes('daha yavaş')) {
       gameStateRef.current.dx *= 0.6;
       gameStateRef.current.dy *= 0.6;
       actions.push('Oyun hızı düşürüldü');
     }
-    
+
+    let spawnedAnomaly = false;
+
+    if (spawnSpeedWords.some(w => cmd.includes(w))) {
+      const radius = 15;
+      const x = Math.max(radius, Math.min(boardDim.width - radius, Math.random() * boardDim.width));
+      const y = Math.max(120, Math.min(240, Math.random() * 120 + 120));
+      gameStateRef.current.powerUps.push({ id: Date.now() + 'spd', type: 'speed', x, y, radius });
+      spawnedAnomaly = true;
+    }
+
+    if (spawnSlowWords.some(w => cmd.includes(w))) {
+      const radius = 15;
+      const x = Math.max(radius, Math.min(boardDim.width - radius, Math.random() * boardDim.width));
+      const y = Math.max(120, Math.min(240, Math.random() * 120 + 120));
+      gameStateRef.current.powerUps.push({ id: Date.now() + 'slw', type: 'slow', x, y, radius });
+      spawnedAnomaly = true;
+    }
+
+    if (multiBallWords.some(w => cmd.includes(w))) {
+      const gState = gameStateRef.current;
+      if (gState.balls.length > 0) {
+        actions.push('Toplar çoğaltıldı');
+        const extras = gState.balls.map(b => ({
+          ...b,
+          dx: -b.dx,
+          id: `b${Date.now()}_${Math.random()}`
+        }));
+        gState.balls.push(...extras);
+        setUiState(prev => ({ ...prev, balls: [...gState.balls] }));
+      }
+    }
+
+    if (weatherWords.some(w => cmd.includes(w))) {
+      actions.push('Fırtına başladı');
+      setUiState(prev => ({ ...prev, weatherType: 'rain' }));
+    }
+
+    if (trailWords.some(w => cmd.includes(w))) {
+      gameStateRef.current.trailActive = true;
+      actions.push('Neon iz aktif');
+      setUiState(prev => ({ ...prev, trailActive: true }));
+    }
+
+    if (laserWords.some(w => cmd.includes(w))) {
+      gameStateRef.current.lasersActive = true;
+      actions.push('Silah sistemi aktif (Lazer)');
+      setUiState(prev => ({ ...prev, lasersActive: true }));
+    }
+
+    if (shieldWords.some(w => cmd.includes(w))) {
+      gameStateRef.current.shieldActive = true;
+      actions.push('Kalkan aktif');
+      setUiState(prev => ({ ...prev, shieldActive: true }));
+    }
+
+    if (spawnedAnomaly) {
+      actions.push('Evrim başarılı: Sektöre anomaliler eklendi.');
+      setUiState(prev => ({ ...prev, powerUps: [...gameStateRef.current.powerUps] }));
+    }
+
+
     if (actions.length > 0) {
       setAgentMessage('Evrim Raporu: ' + actions.join(', '));
     } else {
       setAgentMessage('Komut anlaşılamadı. Yeniden deneyin.');
     }
-    
+
     setCommandText('');
   };
 
   useEffect(() => {
     if (levelData && levelData.rows) {
       setBlocks(levelData.rows);
-      
+
       const flatBlocks = [];
       levelData.rows.forEach((row, rIdx) => {
         row.forEach((color, cIdx) => {
@@ -229,23 +395,29 @@ export default function App() {
           });
         });
       });
+      gameStateRef.current.blocks = flatBlocks;
       setActiveBlocks(flatBlocks);
     }
   }, []);
 
   useEffect(() => {
-    if (boardDim.width > 0 && !isPlaying && uiState.ballX === -100) {
+    if (boardDim.width > 0 && !isPlaying && uiState.balls.length > 0 && uiState.balls[0].x === -100) {
       const initPaddleX = (boardDim.width - paddleWidth) / 2;
       const initBallX = initPaddleX + paddleWidth / 2 - 5;
-      
+
       gameStateRef.current.paddleX = initPaddleX;
-      gameStateRef.current.ballX = initBallX;
-      gameStateRef.current.ballY = 266;
-      
-      setUiState({
-        ballX: initBallX,
-        ballY: 266,
-        paddleX: initPaddleX,
+      gameStateRef.current.balls[0].x = initBallX;
+      gameStateRef.current.balls[0].y = 266;
+
+      setUiState(prev => {
+        const resetBalls = [...prev.balls];
+        resetBalls[0].x = initBallX;
+        resetBalls[0].y = 266;
+        return {
+          ...prev,
+          balls: resetBalls,
+          paddleX: initPaddleX,
+        };
       });
     }
   }, [boardDim.width, isPlaying]);
@@ -254,63 +426,113 @@ export default function App() {
     if (!isPlaying) return;
 
     const state = gameStateRef.current;
-    let nextX = state.ballX + state.dx;
-    let nextY = state.ballY + state.dy;
     
-    if (nextX <= 0) {
-      nextX = 0;
-      state.dx *= -1;
-    } else if (nextX >= boardDim.width - 10) {
-      nextX = boardDim.width - 10;
-      state.dx *= -1;
+    // Laser logic
+    if (state.lasersActive) {
+      state.laserCooldown -= 1;
+      if (state.laserCooldown <= 0) {
+        state.lasers.push({ x: state.paddleX + 4, y: 300 - 24 - 8, id: 'L' + Date.now() });
+        state.lasers.push({ x: state.paddleX + state.paddleWidth - 8, y: 300 - 24 - 8, id: 'R' + Date.now() });
+        state.laserCooldown = 60; // shoot every 60 frames
+      }
     }
     
-    if (nextY <= 0) {
-      nextY = 0;
-      state.dy *= -1;
+    let hitAnyBlock = false;
+    const cols = levelData?.rows?.[0]?.length || 7;
+    let availableBlocksCount = 0;
+
+    // Process Lasers
+    if (state.lasers.length > 0) {
+      state.lasers = state.lasers.filter(laser => {
+        laser.y -= 10;
+        if (laser.y < 0) return false;
+        
+        let laserHit = false;
+        state.blocks = state.blocks.map(block => {
+          if (block.isDestroyed || laserHit) {
+            if (!block.isDestroyed) availableBlocksCount++;
+            return block;
+          }
+          
+          const blockW = (boardDim.width - (cols - 1) * 4) / cols;
+          const startX = block.col * (blockW + 4);
+          const endX = startX + blockW;
+          const startY = block.row * (18 + 6);
+          const endY = startY + 18;
+          
+          if (laser.x + 4 >= startX && laser.x <= endX && laser.y <= endY && laser.y + 10 >= startY) {
+            laserHit = true;
+            hitAnyBlock = true;
+            return { ...block, isDestroyed: true };
+          }
+          availableBlocksCount++;
+          return block;
+        });
+        return !laserHit; 
+      });
+    } else {
+       state.blocks.forEach(b => { if (!b.isDestroyed) availableBlocksCount++; });
     }
 
     const paddleTop = 300 - 16 - 8;
-    if (
-      nextY + 10 >= paddleTop && 
-      nextY <= paddleTop + 8 &&
-      nextX + 10 >= state.paddleX && 
-      nextX <= state.paddleX + state.paddleWidth
-    ) {
-      nextY = paddleTop - 10;
-      state.dy = -Math.abs(state.dy);
-    }
+    const ballRadius = 5;
     
-    if (nextY > 300) {
-      setIsPlaying(false);
-      setGamePhase('GAMEOVER');
-      state.phase = 'GAMEOVER';
-      
-      setTimeout(() => {
-        const resetX = state.paddleX + state.paddleWidth / 2 - 5;
-        const resetY = 266;
-        state.ballX = resetX;
-        state.ballY = resetY;
-        
-        setUiState(prev => ({
-          ...prev,
-          ballX: resetX,
-          ballY: resetY
-        }));
-        
-        setActiveBlocks(orig => orig.map(b => ({ ...b, isDestroyed: false })));
-        setGamePhase('IDLE');
-        state.phase = 'IDLE';
-      }, 2000);
-      return;
-    }
+    // Process Balls
+    let anyBallLost = false;
+    let anyPowerUpConsumed = false;
 
-    const cols = levelData?.rows?.[0]?.length || 7;
-    let anyLeft = false;
-    
-    setActiveBlocks(prevBlocks => {
-      let hit = false;
-      const nextBlocks = prevBlocks.map(block => {
+    for (let i = 0; i < state.balls.length; i++) {
+      let b = state.balls[i];
+      if (!b.history) b.history = [];
+      
+      // History trail processing
+      if (state.trailActive) {
+        b.history.unshift({ x: b.x, y: b.y });
+        if (b.history.length > 5) b.history.pop();
+      } else {
+        b.history = [];
+      }
+
+      let nextX = b.x + b.dx;
+      let nextY = b.y + b.dy;
+
+      // X Boundaries
+      if (nextX <= 0) {
+        nextX = 0;
+        b.dx *= -1;
+      } else if (nextX >= boardDim.width - 10) {
+        nextX = boardDim.width - 10;
+        b.dx *= -1;
+      }
+
+      // Y Boundaries & Shield
+      if (nextY <= 0) {
+        nextY = 0;
+        b.dy *= -1;
+      } else if (state.shieldActive && nextY + 10 >= 290) {
+        nextY = 290 - 10;
+        b.dy = -Math.abs(b.dy);
+        state.shieldActive = false;
+      }
+
+      // Paddle Collision
+      if (
+        nextY + 10 >= paddleTop &&
+        nextY <= paddleTop + 8 &&
+        nextX + 10 >= state.paddleX &&
+        nextX <= state.paddleX + state.paddleWidth
+      ) {
+        nextY = paddleTop - 10;
+        b.dy = -Math.abs(b.dy);
+      }
+
+      // Bottom death
+      if (nextY > 300) {
+        anyBallLost = true;
+      }
+
+      // Block Collision
+      state.blocks = state.blocks.map(block => {
         if (block.isDestroyed) return block;
         
         const blockW = (boardDim.width - (cols - 1) * 4) / cols;
@@ -320,40 +542,137 @@ export default function App() {
         const endY = startY + 18;
         
         if (
-          !hit &&
           nextX + 10 >= startX && nextX <= endX &&
           nextY + 10 >= startY && nextY <= endY
         ) {
-          hit = true;
-          state.dy *= -1;
+          hitAnyBlock = true;
+          b.dy *= -1;
+          availableBlocksCount--;
           return { ...block, isDestroyed: true };
         }
-        anyLeft = true;
         return block;
       });
-      
-      if (hit && !anyLeft) {
-        setTimeout(() => {
-          setIsPlaying(false);
-          setGamePhase('WIN');
-          state.phase = 'WIN';
-        }, 0);
-      }
-      return nextBlocks;
-    });
 
-    // Prevent further state updates if WIN triggered this loop
+      // Power Up Collision
+      const ballCenterX = nextX + ballRadius;
+      const ballCenterY = nextY + ballRadius;
+
+      state.powerUps = state.powerUps.filter(pu => {
+        const dist = Math.hypot(ballCenterX - pu.x, ballCenterY - pu.y);
+        if (dist < ballRadius + pu.radius) {
+          anyPowerUpConsumed = true;
+          if (pu.type === 'speed') {
+            b.dx *= 1.5;
+            b.dy *= 1.5;
+            setTimeout(() => {
+               if (state.balls.find(bl => bl.id === b.id)) {
+                 b.dx /= 1.5;
+                 b.dy /= 1.5;
+                 setAgentMessage('Efekt sona erdi, normal hıza dönüldü');
+               }
+            }, 5000);
+          } else if (pu.type === 'slow') {
+            b.dx *= 0.6;
+            b.dy *= 0.6;
+            setTimeout(() => {
+               if (state.balls.find(bl => bl.id === b.id)) {
+                 b.dx /= 0.6;
+                 b.dy /= 0.6;
+                 setAgentMessage('Efekt sona erdi, normal hıza dönüldü');
+               }
+            }, 5000);
+          }
+          return false;
+        }
+        return true;
+      });
+
+      // Apply speeds and limits
+      const maxSpeedX = 12;
+      const minSpeedX = 2;
+      const maxSpeedY = 12;
+      const minSpeedY = 2;
+
+      let currentSpeedX = Math.abs(b.dx);
+      let currentSpeedY = Math.abs(b.dy);
+
+      if (currentSpeedX > maxSpeedX) b.dx = maxSpeedX * Math.sign(b.dx);
+      if (currentSpeedY > maxSpeedY) b.dy = maxSpeedY * Math.sign(b.dy);
+      if (currentSpeedX < minSpeedX) b.dx = minSpeedX * Math.sign(b.dx === 0 ? 1 : b.dx);
+      if (currentSpeedY < minSpeedY) b.dy = minSpeedY * Math.sign(b.dy === 0 ? -1 : b.dy);
+
+      b.x = nextX;
+      b.y = nextY;
+    }
+
+    if (hitAnyBlock) {
+      setActiveBlocks(state.blocks);
+    }
+    
+    // Death conditions
+    if (anyBallLost) {
+      state.balls = state.balls.filter(b => b.y <= 300);
+      if (state.balls.length === 0) {
+        setIsPlaying(false);
+        setGamePhase('GAMEOVER');
+        state.phase = 'GAMEOVER';
+        
+        setTimeout(() => {
+          const resetX = state.paddleX + state.paddleWidth / 2 - 5;
+          const resetY = 266;
+          state.balls = [{ x: resetX, y: resetY, dx: 5, dy: -5, id: 'b0', history: [] }];
+          state.powerUps = [];
+          state.lasers = [];
+          state.shieldActive = false;
+          state.weatherType = null;
+          state.trailActive = false;
+          state.lasersActive = false;
+          
+          setUiState(prev => ({
+            ...prev,
+            balls: [{ x: resetX, y: resetY, dx: 5, dy: -5, id: 'b0', history: [] }],
+            powerUps: [],
+            lasers: [],
+            shieldActive: false,
+            weatherType: null,
+            trailActive: false,
+            lasersActive: false
+          }));
+
+          state.blocks = state.blocks.map(b => ({ ...b, isDestroyed: false }));
+          setActiveBlocks(state.blocks);
+          setGamePhase('IDLE');
+          state.phase = 'IDLE';
+        }, 2000);
+        return;
+      }
+    }
+
+    // Win condition
+    if (hitAnyBlock && availableBlocksCount <= 0 && state.phase !== 'WIN') {
+      setTimeout(() => {
+        setIsPlaying(false);
+        setGamePhase('WIN');
+        state.phase = 'WIN';
+      }, 0);
+      return;
+    }
+
+    // Prevent state updates if winning
     if (state.phase === 'WIN') return;
 
-    state.ballX = nextX;
-    state.ballY = nextY;
-    
-    setUiState(prev => ({
-      ...prev,
-      ballX: nextX,
-      ballY: nextY
-    }));
+    // Send visual state
+    const uiUpdate = {
+      balls: state.balls.map(b => ({ ...b, history: [...b.history] })),
+    };
+    if (anyPowerUpConsumed) {
+      uiUpdate.powerUps = [...state.powerUps];
+    }
+    if (state.lasersActive) {
+      uiUpdate.lasers = [...state.lasers];
+    }
 
+    setUiState(prev => ({ ...prev, ...uiUpdate }));
     requestRef.current = requestAnimationFrame(gameLoop);
   };
 
@@ -367,7 +686,7 @@ export default function App() {
   }, [isPlaying]);
 
   const getBlockColor = (colorName) => {
-    switch(colorName?.toLowerCase()) {
+    switch (colorName?.toLowerCase()) {
       case 'turkuaz': return COLORS.turkuaz;
       case 'pembe': return COLORS.pembe;
       case 'neon': return COLORS.neon;
@@ -378,7 +697,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      
+
       {/* HEADER BAR */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -392,7 +711,7 @@ export default function App() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+
         {/* TOP HUD */}
         <View style={styles.hudRow}>
           <View style={styles.hudItem}>
@@ -413,9 +732,9 @@ export default function App() {
             <Text style={styles.gameAreaTitle}>OYUN ALANI</Text>
             <Text style={styles.gameAreaSubtitle}>SEKTÖR 7</Text>
           </View>
-          
-          <View 
-            style={styles.gameBoard} 
+
+          <View
+            style={styles.gameBoard}
             onLayout={(e) => setBoardDim(e.nativeEvent.layout)}
             {...panResponder.panHandlers}
           >
@@ -430,8 +749,8 @@ export default function App() {
                     }
                     const color = getBlockColor(blockColorName);
                     return (
-                      <View 
-                        key={`col-${rowIndex}-${colIndex}`} 
+                      <View
+                        key={`col-${rowIndex}-${colIndex}`}
                         style={[styles.brick, { borderColor: color, shadowColor: color }]}
                       >
                         <View style={[styles.brickInner, { backgroundColor: color }]} />
@@ -442,22 +761,63 @@ export default function App() {
               ))}
             </View>
 
-            {/* Interactive Ball & Paddle */}
-            <View 
-              style={[
-                styles.ball, 
-                { 
-                  backgroundColor: ballColor, 
-                  shadowColor: ballColor,
-                  borderColor: ballBorder !== 'transparent' ? ballBorder : undefined,
-                  borderWidth: ballBorder !== 'transparent' ? 2 : 0,
-                  left: uiState.ballX,
-                  top: uiState.ballY,
-                  bottom: undefined
-                }
-              ]} 
-            />
-            <View 
+            {/* WEATHER OVERLAY */}
+            {uiState.weatherType === 'rain' && (
+              <View style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1, overflow: 'hidden' }} pointerEvents="none">
+                 <Animated.View style={{ width: '100%', height: '100%', opacity: blinkAnim, flexDirection: 'row', justifyContent: 'space-around' }}>
+                    {Array.from({length: 15}).map((_, i) => (
+                       <View key={i} style={{ width: 1, height: '100%', backgroundColor: COLORS.neon, opacity: 0.1 + (i % 3)*0.1 }} />
+                    ))}
+                 </Animated.View>
+              </View>
+            )}
+
+            {/* LASERS */}
+            {uiState.lasersActive && uiState.lasers && uiState.lasers.map(l => (
+              <View 
+                key={l.id} 
+                style={{ position: 'absolute', left: l.x, top: l.y, width: 4, height: 16, backgroundColor: COLORS.neon, shadowColor: COLORS.neon, shadowOpacity: 1, shadowRadius: 5, elevation: 3, zIndex: 5 }} 
+              />
+            ))}
+
+            {/* BALLS AND TRAILS */}
+            {uiState.balls && uiState.balls.map(ball => (
+              <React.Fragment key={ball.id}>
+                {uiState.trailActive && ball.history && ball.history.map((h, i) => (
+                  <View 
+                    key={`hist_${i}_${ball.id}`}
+                    style={[
+                      styles.ball, 
+                      { 
+                        left: h.x, top: h.y, 
+                        opacity: 0.8 - (i * 0.15), 
+                        backgroundColor: ballColor, 
+                        shadowColor: ballColor,
+                        zIndex: 4
+                      }
+                    ]} 
+                  />
+                ))}
+                <View
+                  style={[
+                    styles.ball,
+                    {
+                      backgroundColor: ballColor,
+                      shadowColor: ballColor,
+                      borderColor: ballBorder !== 'transparent' ? ballBorder : undefined,
+                      borderWidth: ballBorder !== 'transparent' ? 2 : 0,
+                      left: ball.x,
+                      top: ball.y,
+                      bottom: undefined,
+                      zIndex: 5
+                    }
+                  ]}
+                />
+              </React.Fragment>
+            ))}
+
+            {/* PADDLE & CANNONS */}
+            <View
               style={[
                 styles.paddle,
                 {
@@ -467,11 +827,46 @@ export default function App() {
                   borderWidth: paddleBorder !== 'transparent' ? 2 : 0,
                   width: paddleWidth,
                   left: uiState.paddleX,
-                  alignSelf: 'auto'
+                  alignSelf: 'auto',
+                  zIndex: 6
                 }
               ]}
-            />
-            
+            >
+              {uiState.lasersActive && (
+                <>
+                  <View style={{ position: 'absolute', left: 4, top: -6, width: 4, height: 6, backgroundColor: COLORS.neon, shadowColor: COLORS.neon, shadowOpacity: 1, shadowRadius: 5 }} />
+                  <View style={{ position: 'absolute', right: 4, top: -6, width: 4, height: 6, backgroundColor: COLORS.neon, shadowColor: COLORS.neon, shadowOpacity: 1, shadowRadius: 5 }} />
+                </>
+              )}
+            </View>
+
+            {/* SHIELD WALL */}
+            {uiState.shieldActive && (
+              <View style={{ position: 'absolute', left: 0, top: 290, width: '100%', height: 4, backgroundColor: COLORS.turkuaz, shadowColor: COLORS.turkuaz, shadowOpacity: 1, shadowRadius: 10, elevation: 5, zIndex: 4 }} />
+            )}
+
+            {/* POWER-UPS ANOMALIES */}
+            {uiState.powerUps && uiState.powerUps.map(pu => (
+              <Animated.View
+                key={pu.id}
+                style={{
+                  position: 'absolute',
+                  left: pu.x - pu.radius,
+                  top: pu.y - pu.radius,
+                  width: pu.radius * 2,
+                  height: pu.radius * 2,
+                  borderRadius: pu.radius,
+                  backgroundColor: pu.type === 'speed' ? '#00FFFF' : '#FF5500',
+                  shadowColor: pu.type === 'speed' ? '#00FFFF' : '#FF5500',
+                  shadowOpacity: 0.8,
+                  shadowRadius: 10,
+                  elevation: 5,
+                  transform: [{ scale: pulseAnim }],
+                  zIndex: 10,
+                }}
+              />
+            ))}
+
             {/* CYBERPUNK OVERLAYS */}
             {gamePhase === 'IDLE' && (
               <Animated.View style={[styles.overlayContainer, { backgroundColor: 'transparent', opacity: blinkAnim }]} pointerEvents="none">
@@ -486,7 +881,7 @@ export default function App() {
                 <Text style={styles.overlayTextSubRed}>YENİDEN BAŞLATILIYOR...</Text>
               </Animated.View>
             )}
-            
+
             {gamePhase === 'WIN' && (
               <Animated.View style={[styles.overlayContainer, { opacity: glowAnim }]} pointerEvents="none">
                 <Activity color="#00FF00" size={48} />
@@ -506,9 +901,9 @@ export default function App() {
           <Text style={styles.agentBoxDesc}>
             {agentMessage}
           </Text>
-          
-          <TextInput 
-            style={styles.commandInput} 
+
+          <TextInput
+            style={styles.commandInput}
             placeholder="Evrim komutunu girin..."
             placeholderTextColor={COLORS.textMuted}
             value={commandText}
