@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Dimensions, StatusBar, TextInput, PanResponder, Animated } from 'react-native';
 import { Settings, Play, Cpu, ShieldAlert, Activity, RefreshCw } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import levelData from '../../level.json';
 
 const { width } = Dimensions.get('window');
@@ -117,6 +118,7 @@ export default function GameScreen() {
     trailActive: false,
     lasersActive: false,
     laserCooldown: 0,
+    totalCycles: 0,
   });
 
   const [uiState, setUiState] = useState({
@@ -128,6 +130,7 @@ export default function GameScreen() {
     trailActive: false,
     lasersActive: false,
     weatherType: null,
+    totalCycles: 0,
   });
 
   const requestRef = useRef();
@@ -392,6 +395,13 @@ export default function GameScreen() {
     }
 
 
+    if (cmd.includes('döngüleri sıfırla')) {
+      gameStateRef.current.totalCycles = 0;
+      AsyncStorage.removeItem('@nexblock_cycles');
+      setUiState(prev => ({ ...prev, totalCycles: 0 }));
+      actions.push('Zaman çizgisi çökertildi: Döngüler sıfırlandı');
+    }
+
     if (actions.length > 0) {
       setAgentMessage('Evrim Raporu: ' + actions.join(', '));
     } else {
@@ -402,6 +412,20 @@ export default function GameScreen() {
   };
 
   useEffect(() => {
+    const loadCycles = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('@nexblock_cycles');
+        if (stored !== null) {
+          const val = parseInt(stored, 10);
+          gameStateRef.current.totalCycles = val;
+          setUiState(prev => ({ ...prev, totalCycles: val }));
+        }
+      } catch (e) {
+        console.log('Failed to load cycles', e);
+      }
+    };
+    loadCycles();
+
     if (levelData && levelData.rows) {
       setBlocks(levelData.rows);
 
@@ -484,6 +508,7 @@ export default function GameScreen() {
           if (laser.x + 4 >= startX && laser.x <= endX && laser.y <= endY && laser.y + 10 >= startY) {
             laserHit = true;
             hitAnyBlock = true;
+            state.totalCycles += 1;
             return { ...block, isDestroyed: true };
           }
           availableBlocksCount++;
@@ -569,6 +594,7 @@ export default function GameScreen() {
           hitAnyBlock = true;
           b.dy *= -1;
           availableBlocksCount--;
+          state.totalCycles += 1;
           return { ...block, isDestroyed: true };
         }
         return block;
@@ -628,6 +654,7 @@ export default function GameScreen() {
 
     if (hitAnyBlock) {
       setActiveBlocks(state.blocks);
+      AsyncStorage.setItem('@nexblock_cycles', state.totalCycles.toString());
     }
     
     // Death conditions
@@ -685,6 +712,7 @@ export default function GameScreen() {
     // Send visual state
     const uiUpdate = {
       balls: state.balls.map(b => ({ ...b, history: [...b.history] })),
+      totalCycles: state.totalCycles,
     };
     if (anyPowerUpConsumed) {
       uiUpdate.powerUps = [...state.powerUps];
@@ -747,7 +775,7 @@ export default function GameScreen() {
           <View style={styles.hudItem}>
             <RefreshCw color={COLORS.neon} size={14} />
             <Text style={styles.hudLabel}>DÖNGÜLER</Text>
-            <Text style={styles.hudValue}>0422</Text>
+            <Text style={styles.hudValue}>{uiState.totalCycles.toString().padStart(4, '0')}</Text>
           </View>
         </View>
 

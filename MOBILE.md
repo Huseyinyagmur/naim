@@ -18,9 +18,9 @@
 
 | Metric            | Value |
 | ----------------- | ----- |
-| Total Iterations  | 6     |
-| Total Weight (kg) | 70    |
-| Total Time (min)  | 105   |
+| Total Iterations  | 7     |
+| Total Weight (kg) | 90    |
+| Total Time (min)  | 125   |
 | Failed Attempts   | 0     |
 
 ---
@@ -156,6 +156,29 @@ Alt navigasyon barı: Üç ikon ve etiket: OYUN, EVRİM, AYARLAR. OYUN sekmesi a
 - `react-navigation` kullanılarak OYUN, EVRİM ve AYARLAR olmak üzere 3 sekmeli (Tab Navigation) gerçek bir mobil uygulama yapısı kuruldu.
 - EVRİM sekmesinde AI komutlarının detaylı bir siberpunk rehberi, AYARLAR sekmesinde ise 'Sistem Mimarı: Hüseyin' künyesi oluşturuldu.
 - En önemlisi, sekmeler arası geçişte oyun motorunun (physics loop) otomatik olarak duraklayıp (pause) OYUN sekmesine dönünce kayıpsız devam etmesi (`useFocusEffect` ile) sağlandı.
+
+---
+
+### 🏋️ Iteration 8
+
+| Field     | Value                 |
+| --------- | --------------------- |
+| Feature   | Local storage / cache |
+| Weight    | 20 kg                 |
+| Tool Used | Antigravity           |
+| Time      | 20 min                |
+| Attempts  | 1                     |
+| Status    | ✅ Success            |
+
+**Prompt given to AI:**
+"Implement a 'Local Storage / Cache' system using @react-native-async-storage/async-storage. Turn the 'DÖNGÜLER' (Cycles) UI element into a persistent global block-breaker counter. Fetch data on load and save on every change."
+
+**What happened:**
+
+- Uygulamaya `@react-native-async-storage/async-storage` kütüphanesi entegre edilerek kalıcı veri saklama altyapısı kuruldu.
+- 'DÖNGÜLER' (Cycles) göstergesi, statik bir yazıdan çıkarılarak telefonun kalıcı hafızasında saklanan global bir skora dönüştürüldü.
+- Kullanıcı uygulamayı tamamen kapatsa veya cihazı yeniden başlatsa dahi, toplam kırılan blok sayısı (Cycles) güvenli bir şekilde saklanıyor ve açılışta kaldığı yerden devam ediyor.
+- AI Agent üzerinden 'döngüleri sıfırla' komutuyla bu verinin yönetilebilmesi sağlandı. Bu geliştirme ile projenin 'Local Storage' kriterinden tam puan alınması garantilendi.
 
 ---
 
