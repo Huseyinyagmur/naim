@@ -18,9 +18,9 @@
 
 | Metric            | Value |
 | ----------------- | ----- |
-| Total Iterations  | 1     |
-| Total Weight (kg) | 5     |
-| Total Time (min)  | 15    |
+| Total Iterations  | 3     |
+| Total Weight (kg) | 20    |
+| Total Time (min)  | 35    |
 | Failed Attempts   | 0     |
 
 ---
@@ -51,6 +51,7 @@ Alt bölüm (Ekranın %30'u): 'Evrim Merkezi'. Temiz, açık renkli bir arka pla
 
 Genel stil: Profesyonel, minimalist, oyun alanı için cyberpunk dokunuşlu standart mobil uygulama kullanıcı arayüzü.
 Alt navigasyon barı: Üç ikon ve etiket: OYUN, EVRİM, AYARLAR. OYUN sekmesi aktif ve seçili.
+---
 
 ### 🏋️ Iteration 2
 
@@ -73,32 +74,28 @@ Alt navigasyon barı: Üç ikon ve etiket: OYUN, EVRİM, AYARLAR. OYUN sekmesi a
 
 **Commit:** `[NAIM: NexBlock] Cyberpunk Dark Mode teması uygulandı - 5kg`
 
+---
+
 ### 🏋️ Iteration 3
 
 | Field | Value |
 |-------|-------|
-| Feature | |
-| Weight | |
-| Tool Used | |
-| Time | |
-| Attempts | |
-| Status | |
+| Feature | Text input/output |
+| Weight | 10 kg |
+| Tool Used | Antigravity |
+| Time | 10 min |
+| Attempts | 1 |
+| Status | ✅ Success |
 
 **Prompt given to AI:**
-```
-
-```
+"Inside the bottom 'SİSTEM AJANI' section, there is NO text input field. Right above the red 'EVRİMLEŞTİR' button, you MUST add a proper `<TextInput>` component. Placeholder: 'Evrim komutunu girin...'."
 
 **What happened:**
--
+- Kullanıcının sistemle etkileşime girebilmesi için arayüze fonksiyonel bir metin giriş kutusu (Text Input) eklendi. Siberpunk tasarıma uygun şekilde stillendirildi.
 
-**Screenshot:**
+**Screenshot:** `assets/images/iter3_text_input.png`
 
-**Commit:**
-
----
-
-*(Copy this block for each new iteration)*
+**Commit:** `[NAIM: NexBlock] Text input arayüzü eklendi - 10kg`
 
 ---
 
