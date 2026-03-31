@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Dimensions, StatusBar, TextInput, PanResponder, Animated } from 'react-native';
-import { Settings, Play, Cpu, ShieldAlert, Activity, RefreshCw } from 'lucide-react-native';
+import { Settings, Play, Cpu, ShieldAlert, Activity, RefreshCw, Mic } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import levelData from '../../level.json';
 
 const { width } = Dimensions.get('window');
@@ -54,6 +55,7 @@ const colorWords = {
 export default function GameScreen() {
   const [blocks, setBlocks] = useState([]);
   const [commandText, setCommandText] = useState('');
+  const [isListening, setIsListening] = useState(false);
   const [agentMessage, setAgentMessage] = useState('Yapay zeka çekirdeği tam kapasite çalışıyor. Bir sonraki mutasyon aşaması için beklemede.');
   const [ballColor, setBallColor] = useState('#FF003C');
   const [ballBorder, setBallBorder] = useState('transparent');
@@ -69,6 +71,32 @@ export default function GameScreen() {
 
   const blinkAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(0.8)).current;
+
+  // VOICE RECOGNITION
+  useSpeechRecognitionEvent('start', () => setIsListening(true));
+  useSpeechRecognitionEvent('end', () => setIsListening(false));
+  useSpeechRecognitionEvent('result', (event) => {
+    const text = event.results[0]?.transcript;
+    if (text) {
+      setCommandText(text);
+      if (event.isFinal) {
+        handleEvolve(text);
+      }
+    }
+  });
+
+  const startVoiceCommand = async () => {
+    const perm = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!perm.granted) {
+      alert("Sistem Mikrofon İzni Reddedildi.");
+      return;
+    }
+    ExpoSpeechRecognitionModule.start({
+      lang: 'tr-TR',
+      interimResults: true,
+      maxAlternatives: 1,
+    });
+  };
 
   useEffect(() => {
     Animated.loop(
@@ -170,8 +198,9 @@ export default function GameScreen() {
     })
   ).current;
 
-  const handleEvolve = () => {
-    const cmd = commandText.trim().toLowerCase();
+  const handleEvolve = (overrideCmd) => {
+    const finalCmd = typeof overrideCmd === 'string' ? overrideCmd : commandText;
+    const cmd = finalCmd.trim().toLowerCase();
     let actions = [];
 
     if (hardModeWords.some(w => cmd.includes(w))) {
@@ -955,15 +984,26 @@ export default function GameScreen() {
             {agentMessage}
           </Text>
 
-          <TextInput
-            style={styles.commandInput}
-            placeholder="Evrim komutunu girin..."
-            placeholderTextColor={COLORS.textMuted}
-            value={commandText}
-            onChangeText={setCommandText}
-          />
+          {isListening && (
+            <Text style={{color: '#FF0000', fontSize: 10, letterSpacing: 2, marginBottom: 8, fontWeight: 'bold', alignSelf: 'center'}}>SİSTEM DİNLEMEDE... (SES KAYDEDİLİYOR)</Text>
+          )}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.commandInputWithMic}
+              placeholder="Evrim komutunu girin..."
+              placeholderTextColor={COLORS.textMuted}
+              value={commandText}
+              onChangeText={setCommandText}
+            />
+            <TouchableOpacity 
+              style={[styles.micButton, isListening && styles.micButtonActive]} 
+              onPress={startVoiceCommand}
+            >
+              <Mic color={isListening ? '#FF0000' : COLORS.turkuaz} size={20} />
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={styles.evolveButton} activeOpacity={0.8} onPress={handleEvolve}>
+          <TouchableOpacity style={styles.evolveButton} activeOpacity={0.8} onPress={() => handleEvolve()}>
             <Text style={styles.evolveText}>EVRİMLEŞTİR</Text>
           </TouchableOpacity>
         </View>
@@ -1240,5 +1280,39 @@ const styles = StyleSheet.create({
     marginTop: 8,
     letterSpacing: 2,
     opacity: 0.9,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 10,
+  },
+  commandInputWithMic: {
+    flex: 1,
+    backgroundColor: '#050508',
+    borderWidth: 1,
+    borderColor: '#1E1E28',
+    borderRadius: 8,
+    color: '#E0E5EC',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 14,
+  },
+  micButton: {
+    backgroundColor: '#050508',
+    borderWidth: 1,
+    borderColor: COLORS.turkuaz,
+    borderRadius: 8,
+    padding: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  micButtonActive: {
+    borderColor: '#FF0000',
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    shadowColor: '#FF0000',
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 5,
   }
 });

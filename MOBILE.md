@@ -18,9 +18,9 @@
 
 | Metric            | Value |
 | ----------------- | ----- |
-| Total Iterations  | 10    |
-| Total Weight (kg) | 125   |
-| Total Time (min)  | 175   |
+| Total Iterations  | 11    |
+| Total Weight (kg) | 140   |
+| Total Time (min)  | 200   |
 | Failed Attempts   | 0     |
 
 ---
@@ -249,6 +249,27 @@ Alt navigasyon barı: Üç ikon ve etiket: OYUN, EVRİM, AYARLAR. OYUN sekmesi a
 - 'Sistem Mimarı' alanı için kullanıcıya iki farklı kaynak (Kamera/Galeri) sunularak 'Image Support' kriteri eksiksiz bir şekilde tamamlandı.
 
 ---
+
+### 🏋️ Iteration 11
+
+| Field     | Value       |
+| --------- | ----------- |
+| Feature   | Voice input |
+| Weight    | 15 kg       |
+| Tool Used | Antigravity |
+| Time      | 25 min      |
+| Attempts  | 1           |
+| Status    | ✅ Success  |
+
+**Prompt given to AI:**
+"Implement 'Voice Input' in GameScreen.js. Create a glowing microphone button that triggers speech-to-text. Automatically pass the recognized text to handleEvolve() for instant mutations."
+
+**What happened:**
+
+- Uygulamaya `expo-speech-recognition` (veya uyumlu STT motoru) entegre edilerek sesli komut sistemi kuruldu.
+- Kullanıcı mikrofon ikonuna basarak sesli bir komut verdiğinde (Örn: 'Topu ikile', 'Lazerleri aç'), ses gerçek zamanlı olarak metne dönüştürülüyor ve AI ajan motoruna (handleEvolve) iletiliyor.
+- Komutun metin kutusunda onaylanmasına gerek kalmadan otomatik tetikleme (Auto-trigger) mekanizması kuruldu.
+- Bu geliştirme ile 'Voice Input' kriteri en yüksek seviyeden karşılanarak projenin toplam ağırlığı 140 kg'a ulaştırıldı.
 
 ---
 
