@@ -18,9 +18,9 @@
 
 | Metric            | Value |
 | ----------------- | ----- |
-| Total Iterations  | 8     |
-| Total Weight (kg) | 100   |
-| Total Time (min)  | 140   |
+| Total Iterations  | 9     |
+| Total Weight (kg) | 115   |
+| Total Time (min)  | 160   |
 | Failed Attempts   | 0     |
 
 ---
@@ -202,6 +202,29 @@ Alt navigasyon barı: Üç ikon ve etiket: OYUN, EVRİM, AYARLAR. OYUN sekmesi a
 - Sayfanın en üstüne siberpunk temalı, parlayan neon bir 'Veri Tabanı Tarayıcısı' (Search Bar) eklendi.
 - `TextInput` üzerinden alınan veriyle eş zamanlı çalışan bir filtreleme mantığı kuruldu. Kullanıcı yazdığı anda sistem yüzlerce komut arasından ilgili olanları süzerek kullanıcıya sunuyor.
 - Bu geliştirme ile projenin 'Search Functionality' kriterinden tam puan alınması sağlandı ve toplam ağırlık 100 kg hedefine ulaştı.
+
+---
+
+### 🏋️ Iteration 9
+
+| Field     | Value              |
+| --------- | ------------------ |
+| Feature   | Camera integration |
+| Weight    | 15 kg              |
+| Tool Used | Antigravity        |
+| Time      | 20 min             |
+| Attempts  | 1                  |
+| Status    | ✅ Success         |
+
+**Prompt given to AI:**
+"Implement 'Camera Integration' in SettingsScreen.js. Create a 'SYSTEM ARCHITECT IDENTITY' section. Use expo-camera to allow the user to take a profile picture and save the URI using AsyncStorage."
+
+**What happened:**
+
+- AYARLAR sekmesine 'Sistem Mimarı Kimliği' özelliği eklendi.
+- `expo-camera` kütüphanesi kullanılarak uygulama içine siberpunk arayüzlü, tam ekran bir kamera modülü entegre edildi.
+- Kullanıcının çektiği fotoğraf, AsyncStorage ile cihaz hafızasına kaydedilerek kalıcı bir Profil Fotoğrafı (Avatar) oluşturuldu.
+- Bu iterasyon ile 'Camera Integration' maddesi başarıyla projeye dahil edildi.
 
 ---
 
