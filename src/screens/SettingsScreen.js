@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, SafeAreaView, StatusBar, Switch, ScrollView, To
 import { Settings, Volume2, Monitor, Vibrate, Terminal, User, Camera as CameraIcon } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -86,6 +87,27 @@ export default function SettingsScreen() {
     }
   };
 
+  const pickImageAsync = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      alert("Galeriye erişim izni gereklidir!");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri);
+      await AsyncStorage.setItem(STORAGE_KEY, result.assets[0].uri);
+    }
+  };
+
   const translateY = scanAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, SCREEN_HEIGHT - 100], 
@@ -125,11 +147,11 @@ export default function SettingsScreen() {
             <Text style={{ color: COLORS.pembe, textAlign: 'center', marginBottom: 20 }}>
               Sistem Mimarı Kimliği İçin Kamera Erişimi Gereklidir.
             </Text>
-            <TouchableOpacity style={styles.avatarBtn} onPress={requestPermission}>
+            <TouchableOpacity style={styles.avatarBtnPrimary} onPress={requestPermission}>
               <Text style={styles.avatarBtnText}>İzin Ver</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.avatarBtn, { borderColor: COLORS.pembe, marginTop: 20 }]} onPress={() => setShowCameraView(false)}>
-              <Text style={[styles.avatarBtnText, { color: COLORS.pembe }]}>Geri Dön</Text>
+            <TouchableOpacity style={[styles.avatarBtnSecondary, { marginTop: 20 }]} onPress={() => setShowCameraView(false)}>
+              <Text style={styles.avatarBtnTextSecondary}>Geri Dön</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -186,10 +208,15 @@ export default function SettingsScreen() {
                 <User color={COLORS.turkuaz} size={36} />
               )}
             </View>
-            <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowCameraView(true)}>
-              <CameraIcon color={COLORS.turkuaz} size={16} />
-              <Text style={styles.avatarBtnText}>Kimlik Fotoğrafı Çek / Güncelle</Text>
-            </TouchableOpacity>
+            <View style={styles.avatarBtnContainer}>
+              <TouchableOpacity style={styles.avatarBtnPrimary} onPress={() => setShowCameraView(true)}>
+                <CameraIcon color={COLORS.turkuaz} size={16} />
+                <Text style={styles.avatarBtnText}>📸 Kameradan Çek</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.avatarBtnSecondary} onPress={pickImageAsync}>
+                <Text style={styles.avatarBtnTextSecondary}>🖼️ Galeriden Seç</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -324,12 +351,53 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: 'rgba(0, 240, 255, 0.1)',
   },
+  avatarBtnContainer: {
+    gap: 12,
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: '100%',
+  },
+  avatarBtnPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.turkuaz,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 8,
+    backgroundColor: 'rgba(0, 240, 255, 0.1)',
+    width: '100%',
+  },
+  avatarBtnSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.pembe,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 8,
+    backgroundColor: 'rgba(255, 0, 60, 0.1)',
+    width: '100%',
+  },
   avatarBtnText: {
     color: COLORS.turkuaz,
     fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 1,
     textShadowColor: COLORS.turkuaz,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  avatarBtnTextSecondary: {
+    color: COLORS.pembe,
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    textShadowColor: COLORS.pembe,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },

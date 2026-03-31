@@ -18,9 +18,9 @@
 
 | Metric            | Value |
 | ----------------- | ----- |
-| Total Iterations  | 9     |
-| Total Weight (kg) | 115   |
-| Total Time (min)  | 160   |
+| Total Iterations  | 10    |
+| Total Weight (kg) | 125   |
+| Total Time (min)  | 175   |
 | Failed Attempts   | 0     |
 
 ---
@@ -225,6 +225,30 @@ Alt navigasyon barı: Üç ikon ve etiket: OYUN, EVRİM, AYARLAR. OYUN sekmesi a
 - `expo-camera` kütüphanesi kullanılarak uygulama içine siberpunk arayüzlü, tam ekran bir kamera modülü entegre edildi.
 - Kullanıcının çektiği fotoğraf, AsyncStorage ile cihaz hafızasına kaydedilerek kalıcı bir Profil Fotoğrafı (Avatar) oluşturuldu.
 - Bu iterasyon ile 'Camera Integration' maddesi başarıyla projeye dahil edildi.
+
+---
+
+### 🏋️ Iteration 10
+
+| Field     | Value         |
+| --------- | ------------- |
+| Feature   | Image support |
+| Weight    | 10 kg         |
+| Tool Used | Antigravity   |
+| Time      | 15 min        |
+| Attempts  | 1             |
+| Status    | ✅ Success    |
+
+**Prompt given to AI:**
+"Implement 'Image Support' in SettingsScreen.js by allowing the user to pick an image from their device gallery using expo-image-picker. Ensure it saves to AsyncStorage and updates the profile frame."
+
+**What happened:**
+
+- `expo-image-picker` kütüphanesi entegre edilerek kullanıcıya galerisinden profil resmi seçme özgürlüğü tanındı.
+- Seçilen görsellerin kalıcı olması için `AsyncStorage` yapısı güncellendi; böylece kamera ile çekilen veya galeriden seçilen son resim uygulama her açıldığında otomatik yükleniyor.
+- 'Sistem Mimarı' alanı için kullanıcıya iki farklı kaynak (Kamera/Galeri) sunularak 'Image Support' kriteri eksiksiz bir şekilde tamamlandı.
+
+---
 
 ---
 
